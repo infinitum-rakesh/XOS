@@ -1,0 +1,142 @@
+//S3-free block
+
+alias Cause S0 ;
+
+alias  VPagenum S1 ;
+
+alias Ip_addr S2 ;
+
+Cause = EFR % 10;		// Gets value of cause field (size 1 char)
+VPagenum = (EFR / 10) % 100;    // Gets value of BadVAddr 
+Ip_addr = (EFR/1000);
+
+breakpoint;
+
+if(Cause!=0) then
+	print "Not Page Fault";
+	inline "JMP 11776";
+endif;
+
+if([PTBR+VPagenum*2]==-1) then
+	inline "JMP 11776";
+endif;
+
+breakpoint;
+
+S3=25;
+
+while([MEM_LIST+S3]!=0 && S3<=63) do
+S3=S3+1;
+endwhile;
+
+breakpoint;
+
+if(S3<64) then
+	[MEM_LIST+S3]=1;
+	breakpoint;
+else
+S5=(PTBR-1024)/8;
+S4=-1;
+S6=VPagenum;
+S15=PTBR+S6*2;
+S14=0;
+
+breakpoint;
+
+while(S14!=S15) do
+	
+	while((S6<=2)&&([PAGE_TABLE+S5*8+S6*2+1]!="10")&&([PAGE_TABLE+S5*8+S6*2+1]!="00"))do
+		
+		if(S5==S4 && VPagenum==S6) then
+			S14=PTBR+S6*2;
+			break;
+		endif;
+		
+		S13=[PAGE_TABLE+S5*8+S6*2];			
+		
+		if([PAGE_TABLE+S5*8+S6*2+1]=="11") then
+			[PAGE_TABLE+S5*8+S6*2+1]="01";
+		endif;
+
+		if([PAGE_TABLE+S5*8+S6*2+1]=="01" && [MEM_LIST+S13]<=1) then
+			S7=448;
+
+			while((S7<=511)&&([DISK_LIST+S7]!=0)) do
+			S7=S7+1;
+			endwhile;
+
+			if(S7>=512) then
+				inline "JMP 11776";
+			endif;
+			
+			[DISK_LIST+S7]=1;
+
+			store([PAGE_TABLE+S5*8+S6*2],S7);
+			S3=[PAGE_TABLE+S5*8+S6*2];
+			[PAGE_TABLE+S5*8+S6*2]=S7;
+			[PAGE_TABLE+S5*8+S6*2+1]="00";
+			S6=-1;
+			break;
+		endif;
+	S6=S6+1;
+	endwhile;
+
+
+if(S6==-1) then
+	break;
+endif;
+
+S6=0;
+
+if(S5<=31) then
+	S5=S5+1;
+	if(S5==(PTBR-1024)/8) then
+		S4=S5;
+	endif;
+else
+	S5=0;
+	if(S5==(PTBR-1024)/8) then
+		S4=S5;
+	endif;
+endif;
+
+endwhile;
+
+endif;
+
+breakpoint;
+
+S4=[PTBR+VPagenum*2];
+
+if(S4>=21 && S4<=447) then
+	load(S3,S4);
+endif;
+
+if(S4>=448 && S4<=511) then
+	load(S3,S4);
+	[DISK_LIST+S4]=[DISK_LIST+S4]-1;
+endif;
+
+breakpoint;
+
+[PTBR+VPagenum*2]=S3;
+[PTBR+VPagenum*2+1]="11";
+
+
+S0=(([PTBR+2*(SP/512)]*512)+(SP%512));
+
+breakpoint;
+
+SP = SP + 1; 
+alias newphysicalSP S15; 
+newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+[S15]=Ip_addr;
+
+breakpoint;
+
+ireturn;
+
+
+
+
+

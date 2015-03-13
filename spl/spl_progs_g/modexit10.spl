@@ -1,0 +1,212 @@
+//S0-current PCB
+//S1-new PCB
+//S15-physical SP;
+
+S0=(([PTBR+2*(SP/512)]*512)+(SP%512));
+
+if([S0-1]==10) then
+
+	S0=READY_LIST+(((PTBR-1024)/8)*32);
+
+	S1=S0+32;
+
+	S15=(PTBR-1024)/8;
+breakpoint;
+	while(S1!=S0) do
+		if([S1+1]==(S15+100)) then
+			[S1+1]=1;
+		endif;
+		if(S1>=2528) then
+			S1=1536;
+		else
+			S1=S1+32;
+		endif;	
+	endwhile;
+	
+	breakpoint;
+
+	S0=READY_LIST+(((PTBR-1024)/8)*32);
+
+	S1=S0+32;
+
+	while([S1+1]!=1) do
+		if(S1>=2528) then
+			S1=1536;
+		else 
+			if(S1==S0) then
+				halt;
+			else
+				S1=S1+32;
+			endif;
+		endif;
+	
+	endwhile;
+
+	
+
+	S2=0;
+
+	breakpoint;
+
+	while(S2<8) do
+		S3=[S0+15+S2*2];
+		if(S3!=-1) then
+			[FILE_TABLE+S3*2+1]=[FILE_TABLE+S3*2+1]-1;
+			if([FILE_TABLE+S3*2+1]==0) then
+				[FILE_TABLE+S3*2]=-1;
+			endif;
+		endif;
+		[S0+15+S2*2]=-1;
+		[S0+15+S2*2+1]=-1;
+	S2=S2+1;
+	endwhile;
+
+	[S0+1]=0;
+
+	S2=0;
+
+	breakpoint;
+	
+	while(S2<4) do
+		if(25<=[PTBR+S2*2]<=63) then
+			S3=[PTBR+S2*2];
+			[MEM_LIST+S3]=[MEM_LIST+S3]-1;
+		endif;
+
+		if(448<=[PTBR+S2*2]<=511) then
+			S3=[PTBR+S2*2];
+			[DISK_LIST+S3]=[DISK_LIST+S3]-1;
+			store(6,20);
+		endif;
+
+		[PTBR+S2*2]=-1;
+		[PTBR+S2*2+1]="00";
+	S2=S2+1;
+	endwhile;
+
+	breakpoint;
+
+	BP=[S1+2];
+	SP=[S1+3];
+
+	PTBR=[S1+5];
+	PTLR=[S1+6];
+
+	R0=[S1+7];
+	R1=[S1+8];
+	R2=[S1+9];
+	R3=[S1+10];
+	R4=[S1+11];
+	R5=[S1+12];
+	R6=[S1+13];
+	R7=[S1+14];
+
+	breakpoint;
+
+	SP = SP + 1; 
+	alias newphysicalSP S2; 
+	newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+	[ newphysicalSP ] = [ S1 + 4 ]; 
+
+	[S1+1]=2;	
+
+	breakpoint;
+
+	ireturn;
+
+endif;	
+
+
+
+if([S0-1]==13) then
+
+	S14=[S0-3];
+	S15=READY_LIST+32*S14;
+breakpoint;
+	if([S15+1]==2) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+
+	if([S15+1]==0) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+breakpoint;	
+		
+S0=READY_LIST+(((PTBR-1024)/8)*32);
+[S0+1]=100+S14;	
+	
+
+	S1=S0+32;
+breakpoint;
+	while([S1+1]!=1) do
+		if(S1>=2528) then
+			S1=1536;
+		else 
+			if(S1==S0) then
+				halt;
+			else
+				S1=S1+32;
+			endif;
+		endif;
+	
+	endwhile;
+
+		
+	BP=[S1+2];
+	SP=[S1+3];
+
+	PTBR=[S1+5];
+	PTLR=[S1+6];
+
+	R0=[S1+7];
+	R1=[S1+8];
+	R2=[S1+9];
+	R3=[S1+10];
+	R4=[S1+11];
+	R5=[S1+12];
+	R6=[S1+13];
+	R7=[S1+14];
+
+	breakpoint;
+
+	SP = SP + 1; 
+	alias newphysicalSP S2; 
+	newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+	[ newphysicalSP ] = [ S1 + 4 ]; 
+
+	[S1+1]=2;	
+
+	breakpoint;
+
+	ireturn;
+
+endif;
+
+if([S0-1]==14) then
+	breakpoint;
+	S0=READY_LIST+(((PTBR-1024)/8)*32);
+	breakpoint;
+
+	S1=S0+32;
+
+	S15=(PTBR-1024)/8;
+breakpoint;
+	while(S1!=S0) do
+		if([S1+1]==(S15+100)) then
+			[S1+1]=1;
+		endif;
+		if(S1>=2528) then
+			S1=1536;
+		else
+			S1=S1+32;
+		endif;	
+	endwhile;
+	
+breakpoint;
+
+	ireturn;
+
+endif;
+

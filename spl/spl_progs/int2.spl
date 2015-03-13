@@ -1,0 +1,98 @@
+alias physicalSP S0;
+alias sysCallNo S1;
+alias filename S2;
+alias FAT_SEARCH S3;
+alias SWOFT S4;	
+alias SWOFT_STORE S5;
+alias filedesc S6;	
+alias k S7;
+
+
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+sysCallNo = [physicalSP-1];
+if sysCallNo == 2 then
+	filename = [physicalSP-3];
+	FAT_SEARCH = 2560;
+	while FAT_SEARCH <= 3071 do
+		if [FAT_SEARCH] == filename then
+			break;
+		else
+			FAT_SEARCH = FAT_SEARCH + 8;
+		endif;
+	endwhile;
+	if FAT_SEARCH == 3072 then
+		[physicalSP-2] = 2;
+		ireturn;
+	endif;
+
+	SWOFT = 1344;
+	while SWOFT <= 1471 do 
+		if [SWOFT] == FAT_SEARCH then
+			break;
+		else
+			SWOFT = SWOFT + 2;	 				
+		endif;
+	endwhile;
+
+	if [SWOFT] == FAT_SEARCH then
+		SWOFT_STORE = SWOFT;
+	else
+		SWOFT = 1344;
+		while SWOFT <= 1471 do
+			if [SWOFT] == -1 then
+			break;
+			else
+				SWOFT = SWOFT + 2;
+			endif;
+		endwhile;
+		if SWOFT == 1472 then
+			[physicalSP-2] = 3;
+			ireturn;
+		endif;
+		SWOFT_STORE = SWOFT;
+
+		k = 15;
+		while k <= 30 do
+			if [READY_LIST + k] == -1 then
+				break;
+			endif;
+			k = k + 2;
+		endwhile;
+		if k == 31 then
+			[physicalSP - 2] = 4;
+			ireturn;
+		endif;
+		[READY_LIST  + k] = SWOFT_STORE;
+		[READY_LIST  + k+1] = 0;
+		[SWOFT_STORE] = FAT_SEARCH;
+		[SWOFT_STORE + 1] = [SWOFT_STORE + 1] + 1;
+		[physicalSP - 2] = SWOFT_STORE;
+
+		ireturn;
+	endif;	
+endif;
+if sysCallNo == 3 then
+
+	filedesc = [physicalSP-3];
+	if (filedesc < 0 ) || (filedesc > 7) then
+		[physicalSP-2] = -1;
+		ireturn;
+	endif;
+	if [READY_LIST + 15 + filedesc]	== -1 then
+		[physicalSP-2] = -1;
+		ireturn;
+	else
+		[[READY_LIST + 15 + filedesc] + 1] = 	[[READY_LIST + 15 + filedesc] + 1] - 1;
+		if [[READY_LIST + 15 + filedesc] + 1] == 0 then
+			[[READY_LIST + 15 + filedesc]] = -1;
+			[READY_LIST + 15 + filedesc] = -1;
+			[READY_LIST + 15 + filedesc+1] = -1;
+		endif;
+		[physicalSP-2] = 0;
+		ireturn;
+	endif;
+endif;		
+	
+
+	
+	 

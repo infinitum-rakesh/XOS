@@ -1,0 +1,290 @@
+
+alias physicalSP S0;
+
+alias pagecounter S14;
+
+
+physicalSP =  ( [ PTBR + 6 ] * 512 ) + SP % 512 ;
+
+
+
+alias syscallNo S1;
+
+syscallNo = [physicalSP - 1]; 
+
+
+
+if ( syscallNo == 9 )
+then
+	alias fileName S2;
+	fileName = [ physicalSP - 3 ];
+
+	alias fatIndex S3;                                      
+
+	fatIndex = 0;
+
+	while ( fatIndex < 64 && ( [ FAT + 8 * fatIndex + 0 ] != fileName ) ) do
+		fatIndex = fatIndex + 1;
+	endwhile;
+
+	if ( fatIndex == 64 )
+	then
+		[ physicalSP - 2 ] = -1;
+		ireturn;
+	endif;
+
+	alias basicBlock S4;
+	basicBlock = [ FAT + 8 * fatIndex + 2 ];
+
+	load ( 1, basicBlock );
+	
+	alias counter S15;	
+
+	pagecounter = 0;
+
+	while ( ([SCRATCHPAD + pagecounter ] != -1) && (pagecounter < 256) ) do
+		pagecounter = pagecounter + 1;
+	endwhile;
+
+	if ( pagecounter > 3 ) 
+	then
+		[ physicalSP - 2 ] = -2;
+		ireturn;
+	endif;
+	
+		
+
+
+
+
+		
+	alias currentPID S9;
+	alias currentPCB S10;
+
+	currentPID = ( PTBR - 1024 ) / 8;
+
+	currentPCB = READY_LIST + 32 * currentPID ;
+
+	counter = 0;
+
+	alias swoftIndex S11;
+
+	while ( counter < 8 ) do
+		swoftIndex = [ currentPCB + 15 + 2 * counter ];
+
+		if ( swoftIndex != -1 )
+		then
+			[ FILE_TABLE + 2 * swoftIndex + 1] = [ FILE_TABLE + 2 * swoftIndex + 1] - 1;
+			
+			if([ FILE_TABLE + 2 * swoftIndex + 1] == 0)
+			then
+				[ FILE_TABLE + 2 * swoftIndex ] = -1;
+			endif;
+						
+			[ currentPCB + 15 + 2 * counter ] = -1;
+			[ currentPCB + 15 + 2 * counter + 1] = 0;
+		endif;
+
+		counter = counter + 1;
+
+	endwhile;
+	
+
+	counter = 0;
+
+	while ( counter < 3 ) do
+		if ( [ PTBR + 2 * counter ] != -1 )
+		then
+			if ( ( [PTBR + 2 * counter + 1 ] == "01") || ( [ PTBR + 2 * counter + 1 ] == "11")  )
+			then
+				[ MEM_LIST + [ PTBR + 2 * counter ] ] = [ MEM_LIST + [ PTBR + 2 * counter ] ] - 1;
+			else
+				if ( [ PTBR + 2 * counter ] > 447 )
+				then
+					[ DISK_LIST + [ PTBR + 2 * counter ] ] = [ DISK_LIST + [ PTBR + 2 * counter ] ] - 1;
+				endif;
+				store ( 6, 20 );
+			endif;
+		endif;
+		counter = counter + 1;
+
+	endwhile;	 		
+	
+
+
+
+
+
+
+
+	load (1, basicBlock);
+	counter = 0;
+	
+	while ( counter < pagecounter) do                              
+		[ PTBR + 2 * counter ] = [ SCRATCHPAD + counter ];
+		[ PTBR + 2 * counter + 1] = "00";	      
+		counter = counter + 1;
+	endwhile;
+	
+        counter = pagecounter;
+	
+	while ( counter < 3) do                              
+		[ PTBR + 2 * counter ] = -1;
+		[ PTBR + 2 * counter + 1] = "00";	      
+		counter = counter + 1;
+	endwhile;
+	
+
+
+
+	[PTBR + 7 ] = "01";
+
+
+
+
+
+
+
+	SP = 3 * 512;
+        BP = 3 * 512;
+
+	physicalSP =  ( [ PTBR + 6 ] * 512 ) + SP % 512 ;
+
+	[ physicalSP ] = 0;
+
+
+
+	ireturn;
+
+else 
+	if ( syscallNo == 11 )
+	then 
+		
+		alias currentPID S2;
+		currentPID = ( PTBR - 1024 ) / 8;
+		[ physicalSP - 2 ] = currentPID;
+		ireturn;	
+	
+
+	else
+
+
+		if ( syscallNo == 12 )
+		then 
+			alias currentPID S2;
+			currentPID = ( PTBR - 1024 ) / 8;
+			[ physicalSP - 2 ] = [ READY_LIST + 32 * currentPID + 31];
+			ireturn;	
+
+		endif;
+
+
+
+
+	endif;
+		
+
+
+
+
+
+
+endif;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+		
+						
+		
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				 

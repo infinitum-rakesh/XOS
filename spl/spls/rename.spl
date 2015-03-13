@@ -1,0 +1,12 @@
+alias i S0;
+i=FILE_TABLE;
+while([i]!="first.dat")do
+	i=i+8;
+endwhile;
+[i]="second.dat";
+SP=SP+1;
+alias newphysicalSP S1;
+newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+[ newphysicalSP ] = IP;
+ireturn;
+

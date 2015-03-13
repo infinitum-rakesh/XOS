@@ -1,0 +1,88 @@
+
+alias cause S0;
+alias vpage S1;
+alias ip S2;
+alias page S3;
+alias i S4;
+alias j S5;
+alias phy S6;
+alias k S7;
+alias newphysicalSP S8;
+	
+cause = EFR % 10;
+vpage = (EFR / 10) % 100;
+ip = (EFR/1000);
+phy=PTBR+vpage*2;
+
+if(cause==0)then
+	if(vpage==-1)then
+		print "vpage -1";
+		inline "JMP 11776";
+	endif;
+	i=MEM_LIST + 25;
+	while((i<FILE_TABLE)&&([i]!=0))do
+		i=i+1;
+	endwhile;	
+	if(i==FILE_TABLE)then
+		j=PTBR;
+		while([j+1]!="01")do
+			if([j+1]=="11")then
+				[j+1]="01";
+			endif;
+			j=j+2;			
+			if(j==MEM_LIST) then
+				j=PAGE_TABLE;
+			endif;	
+		endwhile;
+		k=DISK_LIST+448;
+		while([k]==1)do
+			k=k+1;
+		endwhile;
+		if(k==EX_HANDLER)then
+			print "no swapspace";
+			inline "JMP 11776";
+		else
+			store([j],k-DISK_LIST);
+			[k]=1;
+			load([j],[phy]);
+			if([phy]>447)then
+				[DISK_LIST+[phy]]=[DISK_LIST+[phy]]-1;
+			endif;
+			[phy]=[j];
+			[phy+1]="11";			
+			[j]=k-DISK_LIST;
+			[j+1]="00";		
+		endif;
+	else
+		[i]=1;
+		load(i-MEM_LIST,[phy]);
+		if([phy]>447)then
+			[DISK_LIST+[phy]]=[DISK_LIST+[phy]]-1;
+		endif;
+		[phy]=i-MEM_LIST;		
+		[phy+1]="11";					
+	endif;
+	SP=SP+1; 
+	newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+	[ newphysicalSP ] = ip;
+//	breakpoint;			
+	ireturn;
+endif;
+if(cause==1)then
+	print "ill instrxn";
+	inline "JMP 11776";
+endif;
+if(cause==2)then
+	print "ill mem acc";
+	inline "JMP 11776";	
+endif;
+if(cause==3)then
+	print "arithm excep";
+	inline "JMP 11776";	
+endif;
+if(cause==4)then
+	print "ill oper";
+	inline "JMP 11776";	
+endif;
+
+//breakpoint;

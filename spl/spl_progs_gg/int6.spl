@@ -1,0 +1,242 @@
+//S0-phyiscalsp			//S7-                  
+//S1-				//S8-
+//S2-				//S9-
+//S3-				//S10-
+//S4-				//S11-
+//S5-				//S12-
+//S6-				//S13-
+
+S0=(([PTBR+2*(SP/512)]*512)+(SP%512));
+
+if([S0-1]==9) then
+
+	S1=[S0-3];
+
+	breakpoint;
+
+	S2=FAT;
+	while(S2<3072) do
+		if(S1==[S2]) then
+			break;
+		endif;
+	S2=S2+8;
+	endwhile;
+
+breakpoint;
+
+	if(S2==3072) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+
+	S3=[S2+2];
+breakpoint;
+
+	load(1,S3);
+
+	S2=0;
+	S4=0;
+
+breakpoint;
+
+	while(S2<=255) do
+		if(([SCRATCHPAD+S2]!=-1) && ([SCRATCHPAD+S2]!=""))then
+			S4=S4+1;
+		endif;
+	S2=S2+1;
+	endwhile;
+
+	S2=0;
+	S5=0;
+
+breakpoint;
+
+
+	while(S2<6) do
+		if([PTBR+S2+1]=="01") then
+			S5=S5+1;
+		endif;
+		if([PTBR+S2+1]=="11") then
+			S5=S5+1;
+		endif;
+	
+	S2=S2+2;
+	endwhile;
+
+	if(S4>3) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+
+breakpoint;
+
+	if(S4<S5) then
+		S2=PTBR;
+		S1=0;
+		
+		while(S1<=255) do
+			if(([SCRATCHPAD+S1]!=-1) && ([SCRATCHPAD+S1]!="")) then
+				//[S2]=[SCRATCHPAD+S1];
+				S2=S2+2;
+			endif;
+		S1=S1+1;
+		endwhile;
+breakpoint;
+
+		while(S2<(PTBR+6)) do
+			[MEM_LIST+[S2]]=0;
+			[S2]=-1;
+			[S2+1]="00";
+		S2=S2+2;
+		endwhile;
+
+	endif;
+
+breakpoint;
+
+	if(S4>S5) then
+		S6=S4-S5;
+		S2=29;
+		S7=0;
+
+breakpoint;
+
+		while(S2<=63) do
+			if([MEM_LIST+S2]==0) then
+				S7=S7+1;
+				if(S7==S6) then
+					break;
+				endif;
+			endif;
+		S2=S2+1;
+		endwhile;
+
+breakpoint;
+
+		if(S2==64) then
+			[S0-2]=-1;
+			ireturn;
+		endif;
+
+		if(S7==S6) then
+			S7=0;
+			S2=29;
+			S8=S5*2;
+
+breakpoint;
+	
+			while(S2<=63) do
+				if(([MEM_LIST+S2]==0) && (S7<S6)) then
+					[PTBR+S8]=S2;
+					[PTBR+S8+1]="01";
+					S8=S8+2;
+					[MEM_LIST+S2]=1;
+				
+					S7=S7+1;
+				endif;
+
+
+				if(S7==S6) then
+					break;
+				endif;
+			S2=S2+1;
+			endwhile;
+		endif;
+
+breakpoint;
+
+	endif;
+
+	load(1,S3);
+
+	S6=0;
+
+	S7=PTBR;
+
+breakpoint;
+
+	while(S6<=255) do
+		if(([SCRATCHPAD+S6]!=-1) && ([SCRATCHPAD+S6]!="")) then
+			load(1,[SCRATCHPAD+S6]);
+			S8=0;
+			S9=[S7]*512;
+
+
+
+			while(S8<511) do
+				[S9+S8]=[SCRATCHPAD+S8];
+			S8=S8+1;
+			endwhile;
+
+			S7=S7+2;
+	
+			load(1,S3);
+		endif;
+	S6=S6+1;
+	endwhile;
+
+breakpoint;
+
+	S6=READY_LIST+((PTBR-1024)/8)*32;
+
+	S6=S6+15;
+
+	S7=0;
+
+breakpoint;
+
+	while(S7<=7) do
+		S8=[S6+S7*2];
+		if(S8!=-1) then
+			[FILE_TABLE+S8*2+1]=[FILE_TABLE+S8*2+1]-1;
+		
+			if([FILE_TABLE+S8*2+1]==0) then
+				[FILE_TABLE+S8*2]=-1;
+			endif;
+		endif;
+
+	S7=S7+1;
+	endwhile;
+
+	SP=3*512;
+
+	
+	[([PTBR+2*(SP/512)]*512)+(SP%512)]=0;
+
+breakpoint;
+
+	ireturn;
+endif;
+
+
+
+
+	
+
+
+	if([S0-1]==11) then
+		[S0-2]=(PTBR-1024)/8;
+		ireturn;
+	endif;
+
+
+
+
+
+
+
+
+	if([S0-1]==12) then
+		S2=(PTBR-1024)/8;
+		S3=READY_LIST+32*S2;
+		S3=S3+31;		
+		[S0-2]=[S3];
+		ireturn;
+	endif;
+
+
+
+
+
+
+

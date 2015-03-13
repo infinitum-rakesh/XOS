@@ -1,0 +1,260 @@
+
+
+
+alias physicalSP S0;
+
+physicalSP = [ PTBR + 6 ] * 512 + ( SP % 512 ) ;
+
+alias sysCallNo S1;
+
+sysCallNo = [ physicalSP - 1 ];
+
+if ( sysCallNo == 8 )
+then
+	
+	alias currentPID S2;
+	alias currentPCB S3;
+
+	currentPID = ( PTBR - 1024 ) / 8;
+	currentPCB = READY_LIST + 32 * currentPID;
+
+
+	alias newPID S4;
+	alias newPCB S5;
+
+	newPID = 0;
+
+	while ( newPID < 32 ) do
+		newPCB = READY_LIST + 32 * newPID;
+		if ( [ newPCB + 1 ] == 0 ) 
+		then
+			break;
+		else 
+			newPID = newPID + 1;
+		endif;
+	endwhile;
+
+	if ( newPID == 32 )
+	then
+		[ physicalSP - 2 ] = -1;    // return with failure
+		ireturn;
+	endif;
+
+
+	// New PCB is Available
+
+	
+	[ newPCB + 0 ] = newPID;
+
+	alias newPageZero S6;
+	alias newPageOne S7; 
+	alias newPageTwo S8;
+	alias newPageThree S9;
+
+	
+
+
+// ALLOCATE MEMORY PAGE FOR STACK
+
+
+	
+		newPageThree = 25;
+
+		while ( newPageThree < 64 ) do
+			if (  [ MEM_LIST + newPageThree ] == 0   )
+			then
+				break;
+			else
+				newPageThree = newPageThree + 1;
+			endif;
+		endwhile;
+
+		if ( newPageThree == 64 )
+		then
+			[ physicalSP - 2 ] = -1;    // return with failure
+			ireturn;
+		endif;
+	
+	
+
+
+
+	alias counter S10;
+
+
+	// COPY THE STACK CONTENTS..............................		
+	
+		[ MEM_LIST + newPageThree ] = 1;
+		
+		counter = 0;
+
+		while ( counter < 512 ) do
+			[ newPageThree * 512 + counter ] = [  [ PTBR + 6 ] * 512 + counter ] ;
+			counter = counter + 1;
+		endwhile;
+		 
+	
+
+	
+
+	alias newPTBR S11;
+
+	newPTBR = 1024 + 8 * newPID;
+
+        counter = 0;
+	while ( counter < 6 ) do
+ 		[ newPTBR + counter ] = [ PTBR + counter ];
+		counter = counter + 1;
+	endwhile;
+
+	
+	[ newPTBR + 6 ] = newPageThree;
+	[ newPTBR + 7 ] = [ PTBR + 7 ];
+
+
+	counter = 0;
+
+	while ( counter < 3 ) do
+		if ( [ newPTBR + 2 * counter ] != -1 )
+		then
+			if ( ( [ newPTBR + 2 * counter + 1 ] % 10 ) == 1 )
+			then
+				[ MEM_LIST + [ newPTBR + 2 * counter ] ] = [ MEM_LIST + [ newPTBR + 2 * counter ] ] + 1;
+			else
+				if ( [ newPTBR + 2 * counter ] > 447 )
+				then
+					[ DISK_LIST + [ newPTBR + 2 * counter ] ] = [ DISK_LIST + [ newPTBR + 2 * counter ] ] + 1;
+				endif;
+				store ( 6, 20 );
+			endif;
+		endif;
+		counter = counter + 1;
+
+	endwhile;	 		
+
+
+
+
+
+
+
+
+
+
+
+
+	[ newPCB + 5 ] = newPTBR;
+
+	[ newPCB + 6 ] = PTLR;
+
+	[ newPCB + 4 ] = [ physicalSP ];
+
+	
+	[ newPCB + 3 ] = SP - 1;
+
+	//[ newPCB + 2 ] = 3 * 512;
+	[ newPCB + 2 ] = BP;	
+	
+
+	[ newPCB +  7 ] = R0;
+	[ newPCB +  8 ] = R1;
+	[ newPCB +  9 ] = R2;
+	[ newPCB + 10 ] = R3;
+	[ newPCB + 11 ] = R4;
+	[ newPCB + 12 ] = R5;
+	[ newPCB + 13 ] = R6;
+	[ newPCB + 14 ] = R7;
+
+
+	[newPCB + 31] = currentPID;
+
+
+
+	counter = 0;
+	alias index S13;
+	while ( counter < 8 ) do
+		index = [ currentPCB + 15 + 2 * counter ]; 
+		[ newPCB + 15 + 2 *counter ] = [ currentPCB + 15 + 2 *counter ];
+		
+		if ( index != -1 )
+		then
+		[ FILE_TABLE + 2 * index + 1] = [ FILE_TABLE + 2 * index + 1 ] + 1; 	
+		endif;
+
+		counter = counter + 1;
+	endwhile;
+
+
+
+	
+
+	[ newPCB + 1 ] = 1;       // set state to ready
+	[ physicalSP - 2 ] = newPID;
+
+
+	alias newPhysicalSP S12;
+
+	newPhysicalSP = [ newPTBR + 6 ] * 512 + ( ( SP - 1 ) % 512 ) ;
+	
+
+	[ newPhysicalSP - 1] = -2;
+
+
+	ireturn;
+
+else
+	alias fatIndex S4;
+	
+	fatIndex = 0;
+
+	while ( fatIndex < 64 ) do
+		if ( [ FAT + 8 * fatIndex + 2 ] != -1 )
+		then
+			print [ FAT + 8 * fatIndex + 0 ];
+		endif;
+
+		fatIndex = fatIndex + 1;
+	
+	endwhile;
+
+	[ physicalSP - 2 ] = 0;		
+	
+	
+	ireturn;
+
+
+
+
+
+endif;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		

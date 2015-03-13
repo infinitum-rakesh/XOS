@@ -1,0 +1,23 @@
+load --os /home/gooty/myxos/spl/spl_progs/os_startup.xsm
+
+load --int=1 /home/gooty/myxos/spl/spl_progs/int1.xsm
+
+load --int=2 /home/gooty/myxos/spl/spl_progs/int2.xsm
+
+load --int=3 /home/gooty/myxos/spl/spl_progs/int3.xsm
+
+load --int=4 /home/gooty/myxos/spl/spl_progs/int4.xsm
+
+load --int=5 /home/gooty/myxos/spl/spl_progs/int5.xsm
+
+load --int=6 /home/gooty/myxos/spl/spl_progs/int6.xsm
+
+load --int=7 /home/gooty/myxos/spl/spl_progs/int7.xsm
+
+load --int=timer /home/gooty/myxos/spl/spl_progs/timer.xsm
+
+load --exhandler /home/gooty/myxos/spl/spl_progs/exhandler.xsm
+
+load --init /home/gooty/myxos/apl/apl_progs/
+
+load --exec /home/gooty/myxos/apl/apl_progs/

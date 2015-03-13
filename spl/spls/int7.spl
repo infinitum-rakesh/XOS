@@ -1,0 +1,103 @@
+
+alias physicalSP S0;
+alias SysNo S1;
+alias i S2;
+alias SWOFT_ENTRY S3;
+alias Child_pcb S4;
+alias newpcb S5;
+alias j S6;
+alias PID_C S7;
+alias PID_G S8;
+alias newphysicalSP S9; 
+		
+PID_C=(PTBR-PAGE_TABLE)/8;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+SysNo = [physicalSP - 1];
+PID_G=[physicalSP-3];
+
+if(SysNo==13)then
+	if((PID_G==PID_C)||([READY_LIST +32*PID_G+1]==0))then
+		[physicalSP-2]=-1;
+	else
+		[READY_LIST+PID_C*32+1]=100+PID_G;
+		[physicalSP-2]=0;
+		S15 = 100;
+	endif;
+endif;
+if(SysNo==14)then
+	i=READY_LIST;
+	while(i<FAT)do
+		if([i+1]==100+PID_C)then
+			[i+1]=1;
+		endif;
+		i=i+32;
+	endwhile;
+	[physicalSP-2]=0;
+endif;
+if(SysNo==10)then
+        
+	i = READY_LIST;
+	while(([i + 1]!=1)&&(i<FAT)&&([i+1]!=100+PID_C))do
+		i = i + 32;
+	endwhile;
+	if(i==FAT)then
+		halt;
+	else
+		newpcb = i;
+		i = READY_LIST;
+		while([i + 1]!=2)do
+			i = i + 32;
+		endwhile;
+		j = 15;
+		while(j<31)do
+			if([i + j]!=-1)then
+				SWOFT_ENTRY = FILE_TABLE + [i + j]*2;
+				if([SWOFT_ENTRY]!=-1)then
+					if([SWOFT_ENTRY + 1]==1)then
+						[SWOFT_ENTRY] = -1;
+						[SWOFT_ENTRY] = 0;
+					else
+						[SWOFT_ENTRY + 1] = [SWOFT_ENTRY + 1] - 1;	
+					endif;
+				endif;
+			endif;
+			j = j + 2;
+		endwhile;
+		Child_pcb = READY_LIST + ((PTBR-1024)/8)*32;
+		[Child_pcb + 1] = 0;
+		i = PTBR;
+		while(i<PTBR+8)do
+			if([i]!=-1)then
+				if([i]>447)then
+					[DISK_LIST+[i]]=[DISK_LIST+[i]]-1;
+				else
+					if(([i+1]=="01")&&([i+1]=="11"))then
+						[MEM_LIST+[i]]=[MEM_LIST+[i]]-1;
+					endif;
+				endif;
+				[i] = -1;
+			endif;
+			[i + 1] = "00";
+			i = i + 2;
+		endwhile;
+		BP = [newpcb + 2];
+		SP = [newpcb + 3];
+		PTBR = [newpcb + 5];
+		PTLR = [newpcb + 6];
+		R0 = [newpcb + 7];
+		R1 = [newpcb + 8];
+		R2 = [newpcb + 9];
+		R3 = [newpcb + 10];
+		R4 = [newpcb + 11];
+		R5 = [newpcb + 12];
+		R6 = [newpcb + 13];
+		R7 = [newpcb + 14];
+
+		SP = SP + 1; 
+		newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+		[ newphysicalSP ] = [ newpcb + 4 ];
+		[newpcb + 1] = 2;		
+	endif;
+
+endif;	
+ireturn;

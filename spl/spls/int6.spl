@@ -1,0 +1,82 @@
+alias PhysicalSP S0;
+alias SysNo S1;
+alias file S2;
+alias BASIC S3;
+alias cpcb S4;
+alias SWOFT S5;
+alias i S7;
+alias j S8;
+alias RET_VAL S9;
+alias k S10;
+alias PID S6;
+
+PhysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+SysNo = [PhysicalSP - 1];
+file = [PhysicalSP-3];
+PID = (PTBR - PAGE_TABLE)/8;
+if(SysNo==11)then
+	[PhysicalSP - 2] = PID;
+endif;
+if(SysNo==12)then
+	[PhysicalSP - 2] = [READY_LIST + PID*32 + 31];
+endif;
+if(SysNo==9)then
+	i = FAT;
+	while(([i]!=file)&&(i<DISK_LIST))do
+		i = i + 8;
+	endwhile;
+	if(i==DISK_LIST)then
+		RET_VAL = -1;
+	else
+		if([i + 1]<2048)then
+			BASIC = [i + 2];
+			load(1,BASIC);
+			i = PTBR;
+			j = SCRATCHPAD;
+			k = MEM_LIST + 25;
+			while(i<PTBR+6)do
+				if(([i+1]=="01") || ([i+1]=="11"))then
+					[MEM_LIST + [i]] = [MEM_LIST + [i]] - 1;
+				else
+					if([i]>447)then
+						[DISK_LIST + [i]] = [DISK_LIST + [i]] - 1;
+					endif;
+				endif;
+				if([j]!=-1)then
+					[i] = [j];
+					[i+1] = "00";
+					j = j + 1;
+				else
+					[i]=-1;
+					[i+1]="00";	
+				endif;
+				i=i+2;
+			endwhile;
+			[i + 1] = "01";
+			cpcb = READY_LIST + ((PTBR-1024)/8)*32;
+			i = cpcb + 15;
+			while(i<cpcb+31)do
+				if([i]!=-1)then
+					SWOFT = FILE_TABLE + [i]*2;
+					if([SWOFT]!=-1)then
+						if([SWOFT + 1]==1)then
+							[SWOFT] = -1;
+							[SWOFT] = 0;
+						else
+							[SWOFT + 1] = [SWOFT + 1] - 1;	
+						endif;
+					endif;
+				endif;
+				[i]=-1;
+				[i+1]=-1;
+				i = i + 2;
+			endwhile;
+			SP = 3*512;
+			[([PTBR + 2 * (SP / 512)] * 512) + (SP % 512)] = 0;
+		else
+			[PhysicalSP-2]=-1;
+		endif;
+	endif;	
+endif;
+store(6,20);
+ireturn;

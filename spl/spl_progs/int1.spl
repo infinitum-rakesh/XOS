@@ -1,0 +1,120 @@
+alias physicalSP S0;
+alias sysCallNo S1;
+alias filename S2;
+alias i S3;
+alias j S4;
+alias FAT_SEARCH S5;
+alias SWOFT S6;
+alias BASIC_BLOCK S7;
+alias counter S8;
+alias SIZE S9;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+sysCallNo = [physicalSP-1];
+
+
+filename = [physicalSP-3];
+
+i = 24;
+if sysCallNo == 1 then
+	while i<= 447 do
+		if [6*512+i] == 0 then
+			break;
+		else
+			i= i + 1;
+		endif;
+	endwhile;
+	if i == 448 then
+		[physicalSP-2] = -1;
+		ireturn;
+	endif;	
+	
+	j = 2560;
+	while j<=3071 do
+		if [j] == filename then
+			[physicalSP-2] = 2;
+			ireturn;
+		endif;
+		j = j + 8;
+	endwhile;
+	j = 2560;
+	while j<=3071 do
+		if [j+2] == -1 then
+			break;
+		endif;
+		j = j + 8;
+	endwhile;
+	if j == 3072 then
+		[physicalSP-2] = -1;
+		ireturn;
+	endif;
+	[j] = filename;
+	[j+1] = 0;	
+	[j+2] = i;
+	store(5,19);	
+	[6*512+i] = 1;
+	store(6,20);
+	load(1,i);
+	j = 512;
+	while j <= 512+255 do
+		[j] = -1;
+		j = j + 1;
+	endwhile;
+	store(1,i);
+	[physicalSP-2] = 0;
+	ireturn;	
+endif;	
+if sysCallNo == 4 then
+	
+	FAT_SEARCH = 2560;
+	while FAT_SEARCH<= 3071 do
+		if [FAT_SEARCH] == filename then
+			break;
+		else
+			FAT_SEARCH = FAT_SEARCH + 8;
+		endif;
+	endwhile;
+	if FAT_SEARCH == 3072 then
+		[physicalSP-2] = 2;
+		ireturn;
+	endif;
+	
+	SWOFT = 1344;
+	while SWOFT <= 1471 do
+		if [SWOFT] == FAT_SEARCH then
+			[physicalSP - 2] = 3;
+			ireturn;
+		else
+			SWOFT = SWOFT + 2;	
+		endif;
+	endwhile;
+	
+	BASIC_BLOCK = FAT_SEARCH + 2;
+	load(60,BASIC_BLOCK);
+	
+	counter = 0;
+	while counter <= 255 do
+		if [60*512 + counter] > -1 then
+			load(1,[60*512 + counter]);
+			SIZE = 0;
+			while SIZE < 512 do
+				[512 + SIZE] = "";
+				SIZE = SIZE + 1;
+			endwhile;	
+			store(1,[60*512+ counter]);
+			[6*512 + [60*512+ counter]] = 0;
+		endif;
+		[60*512 + counter] = "";
+		counter = counter + 1;
+	endwhile;
+	[6*512 + [FAT_SEARCH + 2]] = 0;
+	[FAT_SEARCH + 2] = -1;
+	[FAT_SEARCH + 1] = 0;
+	[FAT_SEARCH] = -1;	
+	store(60,BASIC_BLOCK);
+	[512*6 + BASIC_BLOCK] = 0;
+	store(5,19);
+	store(6,20);
+	[physicalSP - 2] = 0;
+	ireturn;
+endif;	

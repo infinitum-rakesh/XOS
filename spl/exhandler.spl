@@ -1,0 +1,138 @@
+alias Cause S0;
+alias VPagenum S1;
+alias Ip_addr S2;
+
+
+
+
+Cause = EFR % 10;		// Gets value of cause field (size 1 char)
+VPagenum = (EFR / 10) % 100;    // Gets value of BadVAddr 
+Ip_addr = (EFR/1000);
+
+alias physicalSP S11;
+physicalSP= ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+if(Cause!=0) then
+	if(Cause==1) then
+		print "Illegal intruction";
+	endif; 
+	if(Cause==2) then
+		print "Illegal mem access";
+	endif; 
+	if(Cause==3) then
+		print "Arithmetic exception";
+	endif; 
+	if(Cause==4) then
+		print "Illegal operands";
+	endif; 
+	SP=SP+1;
+	physicalSP=physicalSP+1;
+	[physicalSP]=1;
+	SP=SP+1;
+	physicalSP=physicalSP+1;
+	[physicalSP]=10;
+	SP=SP+1;
+	physicalSP=physicalSP+1;
+	[physicalSP]=10;
+	inline "JMP 11776";
+endif;
+
+if(Cause==0) then
+
+	alias freepage S4;
+	if([PTBR+VPagenum*2]==-1) then
+		SP=SP+1;
+		physicalSP=physicalSP+1;
+		[physicalSP]=1;
+		SP=SP+1;
+		physicalSP=physicalSP+1;
+		[physicalSP]=10;
+		SP=SP+1;
+		physicalSP=physicalSP+1;
+		[physicalSP]=10;
+	
+		inline "JMP 11776";
+	endif;
+
+	alias i S3;
+	i=25;
+	while(i<64) do
+		if([MEM_LIST+i]==0) then
+			break;
+		endif;
+	i=i+1;
+	endwhile;
+	if(i<64) then
+		freepage=i;
+		[MEM_LIST+i]=1;
+	else
+		alias j S5;		
+		j=PTBR-1024;
+		while(1==1) do
+			if([PAGE_TABLE+j+1]=="11") then
+				[PAGE_TABLE+j+1]="01";
+			endif;
+
+			if([PAGE_TABLE+j+1]=="01") then
+				[PAGE_TABLE+j+1]="11";
+				alias k S6;
+				k=448;
+				while(k<512) do
+					if([DISK_LIST+k]==0) then 
+						break;
+					endif;
+					k=k+1;
+				endwhile;
+
+				if(k>=512) then
+					SP=SP+1;
+					physicalSP=physicalSP+1;
+					[physicalSP]=1;
+					SP=SP+1;
+					physicalSP=physicalSP+1;
+					[physicalSP]=10;
+					SP=SP+1;
+					physicalSP=physicalSP+1;
+					[physicalSP]=10;
+	
+					inline "JMP 11776";
+				endif;
+				
+				[DISK_LIST+k]=1;
+				store(6,20);
+				store([PAGE_TABLE+j],k);
+				[PAGE_TABLE+j]=k;
+				[PAGE_TABLE+j+1]="00";
+				freepage=[PAGE_TABLE+j];
+				break;	
+			endif;
+			j=j+2;
+			if((j+2)%8==0) then
+				j=j+2;
+			endif;
+			if(j==256) then
+				j=0;
+			endif;
+		endwhile;			
+	endif;
+		
+	if([PTBR+VPagenum*2]>=21&&[PTBR+VPagenum*2]<=447) then
+		load(freepage,[PTBR+VPagenum*2]);
+		[PTBR+VPagenum*2]=freepage;
+		[PTBR+VPagenum*2+1]="11";
+	endif;
+
+	if([PTBR+VPagenum*2]>=448&&[PTBR+VPagenum*2]<=511) then
+		load(freepage,[PTBR+VPagenum*2]);
+		[DISK_LIST+[PTBR+VPagenum*2]]=[DISK_LIST+[PTBR+VPagenum*2]]-1;
+		[PTBR+VPagenum*2]=freepage;
+		[PTBR+VPagenum*2+1]="11";	
+	endif;
+	
+	SP=SP+1;
+	physicalSP= ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+	[physicalSP]=Ip_addr;
+	store ( 6, 20);
+	ireturn;
+endif;

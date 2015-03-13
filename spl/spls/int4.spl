@@ -1,0 +1,61 @@
+alias SysNo S0;
+alias Word S1;
+alias FILE_DESC S2;
+alias RET_VAL S3;
+alias POFT S4;
+alias SWOFT_INDEX S5;
+alias LSEEK S6;
+alias FAT_INDEX S7;
+alias BASIC S8;
+alias dl S9;
+alias BLOCK_NUM S10;
+
+SysNo = [([PTBR + 2 * ((SP-1) / 512)] * 512) + ((SP-1) % 512)];
+Word = [([PTBR + 2 * ((SP-3) / 512)] * 512) + ((SP-3) % 512)];
+FILE_DESC = [([PTBR + 2 * ((SP-4) / 512)] * 512) + ((SP-4) % 512)];
+POFT = READY_LIST + ((PTBR - 1024)/8)*32 + 15;
+
+if(SysNo==5)then
+//	print "in write";
+	if((FILE_DESC>=0)&&(FILE_DESC<8))then
+		if([POFT + FILE_DESC*2]!=-1)then
+			SWOFT_INDEX = [POFT + FILE_DESC*2];
+			LSEEK = [POFT + FILE_DESC*2 + 1];
+			FAT_INDEX = [FILE_TABLE + SWOFT_INDEX*2];
+			BASIC = [FAT + FAT_INDEX*8 + 2];
+			load(1,BASIC);
+			BLOCK_NUM = [SCRATCHPAD + LSEEK/512];
+			if(BLOCK_NUM==-1)then
+				dl = DISK_LIST + 24;
+				while((dl-DISK_LIST<448)&&([dl]==1)) do
+					dl = dl+1;
+				endwhile;
+				if(dl-DISK_LIST==448)then
+					RET_VAL = -1;
+				else
+					[dl] = 1;
+					BLOCK_NUM = dl-DISK_LIST;
+					[SCRATCHPAD + LSEEK/512] = dl-DISK_LIST;
+					[FAT + FAT_INDEX*8 + 1] = [FAT + FAT_INDEX*8 + 1] + 512;
+					store(1,BASIC); 
+				endif;		
+			endif;
+			load(1,BLOCK_NUM);
+			[SCRATCHPAD + LSEEK%512] = Word;
+			store(1,BLOCK_NUM);
+			[POFT + FILE_DESC*2 + 1] = [POFT + FILE_DESC*2 + 1] + 1;
+			RET_VAL = 0;
+		else
+			RET_VAL = -1;	
+		endif;
+	else
+		RET_VAL = -1;
+	endif;
+endif;
+[([PTBR + 2 * ((SP-2) / 512)] * 512) + ((SP-2) % 512)] = RET_VAL;
+store(5,19);
+store(6,20);
+if(RET_VAL==-1)then
+	breakpoint;
+endif;	
+ireturn;

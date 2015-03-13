@@ -1,0 +1,319 @@
+
+alias Cause S0;
+
+alias VPageNum S1;
+
+alias Ip_addr S2;
+
+alias physicalSP S3;
+
+Cause = EFR % 10;
+
+VPageNum = ( EFR / 10 ) % 100;
+
+Ip_addr = ( EFR / 1000 );
+
+
+
+
+alias flag S13;
+
+physicalSP = [ PTBR + 6 ] * 512 + ( SP % 512 );
+
+if ( Cause != 0 ) 
+then
+	if ( Cause == 1 )
+        then
+		print Ip_addr;	
+			
+		print "Ill ins...";
+	endif; 
+
+	if ( Cause == 2 ) 
+	then
+		print "Ill mem ";
+	endif; 
+	
+	if ( Cause == 3 )
+	then
+		print "Arithmetic exception";
+	endif; 
+	
+	if ( Cause == 4 )
+	then
+		print "Ill ops";
+	endif; 
+	
+
+	// Exitting..................
+
+	print "halting..";	
+
+	SP = SP + 1;
+
+	physicalSP = physicalSP + 1;
+
+	// dummy space for return value
+
+	SP = SP + 1;
+	physicalSP = physicalSP + 1;
+	
+ 	[ physicalSP ] = 10;        // system call number
+
+	SP = SP + 1;
+
+	physicalSP = physicalSP + 1;
+	
+	[ physicalSP ] = Ip_addr + 2;         // dummy ip
+
+	inline "JMP 11776";
+
+endif;
+
+
+// Page Fault
+
+
+if ( [ PTBR + 2 * VPageNum ]  == -1 ) 
+then
+	// Exitting..................
+
+	print "halting";
+
+	SP = SP + 1;
+
+	physicalSP = physicalSP + 1;
+
+	// dummy space for return value
+
+	SP = SP + 1;
+	physicalSP = physicalSP + 1;
+	
+ 	[ physicalSP ] = 10;        // system call number
+
+	SP = SP + 1;
+
+	physicalSP = physicalSP + 1;
+	
+	[ physicalSP ] = Ip_addr + 2;         // dummy ip
+
+	inline "JMP 11776";
+	  
+endif;
+
+
+alias freePage S4;
+
+freePage = 25;
+
+while ( freePage < 64 ) do
+	if ( [ MEM_LIST + freePage ] == 0 )
+	then
+		[ MEM_LIST + freePage ] = 1; 		
+		break;
+	else
+		freePage = freePage + 1;
+	endif;
+
+endwhile;
+
+
+// Page Replacement Algorithm
+
+alias i S5;
+alias j S6;
+
+alias freeBlock S7;
+
+alias victimPage S8;
+
+alias currentPID S9;
+
+currentPID = ( PTBR - 1024 ) / 8;
+
+
+if ( freePage == 64 )
+then
+	
+	victimPage = -1;	
+
+//	i = currentPID;
+//	j = 0;
+//	while ( j < 3 ) do
+//		if ( ( [1024 + 8 * i + 2 * j + 1]== "01" ) && ([MEM_LIST + [1024 + 8 * i + 2 * j + 0] ] <= 1) )  
+//		then
+//			victimPage = [1024 + 8 * i + 2 * j + 0]; 				
+//			
+//			break;
+//		else
+//			if ( ( [1024 + 8 * i + 2 * j + 1]== "11" ) && ([MEM_LIST + [1024 + 8 * i + 2 * j + 0] ] <= 1) )
+//			then
+//				[1024 + 8 * i + 2 * j + 1] = "01";				
+//			endif;	
+//				
+//			j = j+1;
+//		endif;
+//	endwhile;
+		
+		
+
+	if ( victimPage == -1 )
+	then
+		i =  currentPID  ;
+                flag = 0;
+		
+		while ( 1 ) do		
+			j = 0;
+			while ( j < 3 ) do
+				if ( ( [1024 + 8 * i + 2 * j + 1]== "01" ) && ([MEM_LIST + [1024 + 8 * i + 2 * j + 0] ] <= 1) )  
+				then
+					victimPage = [1024 + 8 * i + 2 * j + 0]; 
+					flag = 1;					
+					break;
+				else
+					if ( ( [1024 + 8 * i + 2 * j + 1]== "11" ) && ([MEM_LIST + [1024 + 8 * i + 2 * j + 0] ] <= 1) )
+					then
+						[1024 + 8 * i + 2 * j + 1] = "01";				
+					endif;	
+				
+					j = j + 1;
+				endif;
+			
+		
+			endwhile;
+		if ( flag == 1)	
+		then
+                     break;
+		endif;	
+
+		i = (i + 1) % 32;
+	
+				
+
+		endwhile;	
+
+	endif;
+
+      
+
+	// We get VICTIM page
+
+	// Next find Free Block
+
+	freeBlock = 448;
+
+	while ( freeBlock < 512 ) do
+		if ( [ DISK_LIST + freeBlock ] == 0 )
+		then
+			break;
+		else	
+			freeBlock = freeBlock + 1;
+		endif;
+
+	endwhile;
+
+	if ( freeBlock == 512 ) // Exit
+	then
+ 		SP = SP + 1;
+
+		physicalSP = physicalSP + 1;
+
+		// dummy space for return value
+
+		SP = SP + 1;
+		physicalSP = physicalSP + 1;
+	
+ 		[ physicalSP ] = 10;        // system call number
+
+		SP = SP + 1;
+
+		physicalSP = physicalSP + 1;
+	
+		[ physicalSP ] = Ip_addr + 2;         // dummy ip
+
+		inline "JMP 11776";
+	endif;
+
+
+
+	store ( victimPage, freeBlock);
+
+	[ DISK_LIST + freeBlock ] = 1;
+	store ( 6, 20 );
+
+	[1024 + 8 * i + 2 * j + 0] = freeBlock;
+        [1024 + 8 * i + 2 * j + 1] = "00";
+	freePage = victimPage;
+endif;
+
+
+
+
+
+
+if ( ([ PTBR + 2 * VPageNum + 0 ] > 20) && ([ PTBR + 2 * VPageNum + 0 ] < 448) ) 
+then
+	load ( freePage, [ PTBR + 2 * VPageNum + 0 ] );
+else
+	if ([ PTBR + 2 * VPageNum + 0 ] > 447) 
+	then
+		load ( freePage, [ PTBR + 2 * VPageNum + 0 ] );			
+		[ DISK_LIST +  [ PTBR + 2 * VPageNum + 0 ] ] = [ DISK_LIST +  [ PTBR + 2 * VPageNum + 0 ] ] - 1;
+	endif; 
+endif;
+
+
+
+	
+store ( 6, 20 );
+
+
+[ PTBR + 2 * VPageNum + 0 ] = freePage;
+[ PTBR + 2 * VPageNum + 1 ] = "11";
+	
+		
+SP = SP + 1; 
+physicalSP = physicalSP + 1;
+
+physicalSP=([PTBR + 2* (SP/512)]*512 + (SP%512));
+
+
+//print physicalSP;
+
+//print "change";
+[ physicalSP ] = Ip_addr;
+
+//print "hai";
+
+ireturn;
+	
+
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

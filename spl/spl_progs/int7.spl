@@ -1,0 +1,76 @@
+//print "int 7";
+
+//aliases
+alias psp S0;
+alias sysno S1;
+alias i S2;
+alias soft_e S3;
+alias cpcb S4;
+alias newpcb S5;
+alias j S6;
+
+psp = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+sysno = [psp - 1];
+
+if(sysno==10)then
+//	print "in exit";
+	i = READY_LIST;
+	while(([i + 1]!=1)&&(i<FAT))do
+		i = i + 32;
+	endwhile;
+	if(i==FAT)then
+		halt;
+	else
+		newpcb = i;
+		i = READY_LIST;
+		while([i + 1]!=2)do
+			i = i + 32;
+		endwhile;
+		j = 15;
+		while(j<31)do
+			if([i + j]!=-1)then
+				soft_e = FILE_TABLE + [i + j]*2;
+				if([soft_e]!=-1)then
+					if([soft_e + 1]==1)then
+						[soft_e] = -1;
+						[soft_e] = 0;
+					else
+						[soft_e + 1] = [soft_e + 1] - 1;	
+					endif;
+				endif;
+			endif;
+			j = j + 2;
+		endwhile;
+		cpcb = READY_LIST + ((PTBR-1024)/8)*32;
+		[cpcb + 1] = 0;
+		i = PTBR;
+		while(i<PTBR+8)do
+			if([i]!=-1)then
+				[MEM_LIST + [i]] = 0;
+				[i] = -1;
+			endif;
+			[i + 1] = "00";
+			i = i + 2;
+		endwhile;
+		BP = [newpcb + 2];
+		SP = [newpcb + 3];
+		PTBR = [newpcb + 5];
+		PTLR = [newpcb + 6];
+		R0 = [newpcb + 7];
+		R1 = [newpcb + 8];
+		R2 = [newpcb + 9];
+		R3 = [newpcb + 10];
+		R4 = [newpcb + 11];
+		R5 = [newpcb + 12];
+		R6 = [newpcb + 13];
+		R7 = [newpcb + 14];
+
+		SP = SP + 1; 
+		alias newphysicalSP S2; 
+		newphysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512); 
+		[ newphysicalSP ] = [ newpcb + 4 ];
+		[newpcb + 1] = 2;		
+	endif;
+endif;	
+breakpoint;
+ireturn;

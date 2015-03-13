@@ -1,0 +1,113 @@
+//print "in int5";
+
+//aliases
+alias sysno S0;
+alias res S1;
+alias psp S2;
+alias i S3;
+alias novp S4;
+alias j S5;
+alias ppid S6;
+alias chpid S7;
+alias chpcb S8;
+alias src S9;
+alias dst S10;
+alias k S11;
+alias ppcb S12;
+alias nopa S13;
+
+psp = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+sysno = [psp - 1];
+ppid = (PTBR - PAGE_TABLE)/8;
+ppcb = READY_LIST + ppid*32;
+
+if(sysno==8)then
+//	print "in fork";
+	i = READY_LIST;
+	while((i<FAT)&&([i + 1]!=0))do
+		i = i + 32;
+	endwhile;
+	if(i==FAT)then
+		res = -1;
+	else
+		chpid = (i-READY_LIST)/32;
+		chpcb = i;
+		novp = 0;
+		nopa = 0;
+		i = PTBR;
+		while(i<PTBR+8)do
+			if([i]!=-1)then
+				novp = novp + 1;
+			endif;
+			i = i + 2;
+		endwhile;
+		i = MEM_LIST + 29;
+		while((nopa<novp)&&(i<FILE_TABLE))do
+			if([i]==0)then
+				nopa = nopa + 1;
+			endif;
+			i = i + 1;
+		endwhile;
+		if(nopa==novp)then
+			[chpcb] = chpid;
+			i = chpcb + 15;
+			while(i<chpcb+31)do
+				[i] = -1;
+				i = i + 1;
+			endwhile;
+			i = PTBR;
+			j = MEM_LIST + 29;
+			while(i<PTBR+8)do
+				if([i]!=-1)then
+					while([j]!=0)do
+						j = j + 1;
+					endwhile;
+					src = [i]*512;
+					dst = (j-MEM_LIST)*512;
+					k = 0;
+					while(k<512)do
+						[dst] = [src];
+						dst = dst + 1;
+						src = src + 1;
+						k = k + 1;
+					endwhile;
+					[j] = 1;
+					[PAGE_TABLE + chpid*8 + i-PTBR] = j-MEM_LIST;
+					[PAGE_TABLE + chpid*8 + i-PTBR + 1] = "01";
+				endif;
+				i = i + 2;
+			endwhile;
+			[chpcb + 5] = PAGE_TABLE + chpid*8;			//ptbr
+			[chpcb + 6] = 4;			
+			[chpcb + 4] = [psp];							//ip
+			[chpcb + 3] = SP - 1;						//sp
+			[chpcb + 2] = BP;
+			[chpcb + 7] = R0;
+			[chpcb + 8] = R1;
+			[chpcb + 9] = R2;
+			[chpcb + 10] = R3;
+			[chpcb + 11] = R4;
+			[chpcb + 12] = R5;
+			[chpcb + 13] = R6;
+			[chpcb + 14] = R7;
+			i = 0;
+			while(i<8)do
+				if([ppcb + 15 + i]!=-1)then
+					[chpcb + 15 + i] = [ppcb + 15 + i];
+					[chpcb + 15 + i + 1] = [ppcb + 15 + i + 1];
+					[FILE_TABLE + [ppcb + 15 + i]*2 + 1] = [FILE_TABLE + [ppcb + 15 + i]*2 + 1] + 1;
+				endif;
+				i = i + 2;
+			endwhile;
+			[chpcb + 1] = 1;
+			res = chpid;
+			[([[chpcb + 5] + 2 * ((SP-2) / 512)] * 512) + ((SP-2) % 512)] = 3;
+		else
+			res = -1;
+		endif;
+	endif;
+	breakpoint;
+endif;
+
+[psp - 2] = res;
+ireturn;

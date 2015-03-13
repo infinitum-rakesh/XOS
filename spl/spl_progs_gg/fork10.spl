@@ -1,0 +1,231 @@
+//S0-physicalsp of parent			//S7-                  
+//S1-			//S8-
+//S2-			//S9-
+//S3-			//S10-
+//S4-			//S11-
+//S5-stack			//S12-
+//S6-			//S13-
+
+S0=(([PTBR+2*(SP/512)]*512)+(SP%512));
+
+//breakpoint;
+
+if([S0-1]==8) then
+
+	S2=READY_LIST;
+	
+	breakpoint;
+
+	while(S2<2560) do
+		if([S2+1]==0) then
+			S3=(S2%READY_LIST)/32;
+			break;
+		endif;
+	S2=S2+32;
+	endwhile;
+
+	if(S2>=2560) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+
+	[S2]=S3;
+
+	S4=MEM_LIST+26;       //S4=
+	
+	breakpoint;
+
+	while(S4<=1343) do
+		if([S4]==0) then
+			S6=S4-1280;
+			[S4]=1;		
+			break;
+		endif;
+
+	S4=S4+1;
+	endwhile;
+
+//second-chance
+
+
+	if(S4>=1344) then
+		S5=(PTBR-1024)/8;
+		S6=[S0]/512;
+		//S14=0;   
+
+		breakpoint;
+
+		while(1==1) do
+	
+			S1=PAGE_TABLE+S5*8+S6*2;			
+
+			while((S6<=2)&&([S1+1]!="10")&&([S1+1]!="00"))do
+		
+				//if((S5==S4) && (S6==[S0]/512)  ) then
+				//	S14=PTBR;
+				//	break;
+				//endif;
+		
+				S13=[S1];			
+		
+				if([S1+1]=="11") then
+					[S1+1]="01";
+				endif;
+
+				if([S1+1]=="01" && [MEM_LIST+S13]==1 && S13>=25) then
+					S7=448;
+
+					while((S7<=511)&&([DISK_LIST+S7]!=0)) do
+					S7=S7+1;
+					endwhile;
+
+					//print("hi");
+					//print(S5);
+					//print(S13);
+					//print([S1+6]);
+					
+
+					if(S7>=512) then
+						inline "JMP 11776";
+					endif;
+					
+					//print(S7);
+
+					[DISK_LIST+S7]=1;
+
+					store(S13,S7);
+					//S10=[S1];
+					[S1]=S7;
+					[S1+1]="00";
+					S6=-1;
+					break;
+				endif;
+			S6=S6+1;
+			endwhile;
+
+
+		if(S6==-1) then
+			S6=S13;
+			break;
+		endif;
+
+		S6=0;
+
+		if(S5<31) then
+			S5=S5+1;
+		else
+			S5=0;
+		endif;
+		
+		//if(S5==(PTBR-1024)/8) then
+		//		S4=S5;
+		//endif;
+		
+		endwhile;
+
+	endif;
+
+	
+//second-chance ends
+
+	S7=PTBR;
+	S8=1024+(S3*8);
+
+	S9=[S7+6];
+	S10=0;
+
+	breakpoint;
+
+	while(S10<=511) do
+		[S6*512+S10]=[S9*512+S10];
+		S10=S10+1;
+	endwhile;
+
+
+	[S8+6]=S6;
+	[S8+7]="01";
+
+	S10=0;
+	
+	breakpoint;
+
+	while(S10<=4) do
+		[S8+S10]=[S7+S10];
+		[S8+S10+1]=[S7+S10+1];
+		
+		S11=[S7+S10];
+
+		if([S7+S10+1]=="01" || [S7+S10+1]=="11") then
+			
+			[MEM_LIST+S11]=[MEM_LIST+S11]+1;
+		endif;
+
+		if(([S7+S10+1]=="00" || [S7+S10+1]=="10") && ([S7+S10]>=448) && ([S7+S10]<=511)) then
+			
+			[DISK_LIST+S11]=[DISK_LIST+S11]+1;
+		endif;
+
+		
+
+	S10=S10+2;
+	endwhile;
+
+	store(6,20);
+
+breakpoint;	
+
+	S8=READY_LIST+(S3*32);
+
+	S15=READY_LIST+(((PTBR-1024)/8)*32);
+
+	[S8+5]=1024+(S3*8);
+	[S8+4]=[S0];
+	[S8+3]=SP-1;
+	[S8+2]=BP;
+	[S8+6]=PTLR;
+	[S8+7]=R0;		
+	[S8+8]=R1;
+	[S8+9]=R2;
+	[S8+10]=R3;
+	[S8+11]=R4;
+	[S8+12]=R5;
+	[S8+13]=R6;
+	[S8+14]=R7;
+	[S8+31]=(PTBR-1024)/8;
+
+	breakpoint;
+
+	S5=0;
+
+	breakpoint;	
+
+	while(S5<8) do
+		if([S15+15+S5*2]!=-1) then
+			[S8+15+S5*2]=[S15+15+S5*2];
+			[S8+15+S5*2+1]=[S15+15+S5*2+1];
+		
+			S14=[S15+15+S5*2]*2;	
+
+			[FILE_TABLE+S14+1]=[FILE_TABLE+S14+1]+1;
+		endif;
+	S5=S5+1;
+	endwhile;
+
+	breakpoint;
+	
+	[S8+1]=1;
+	[S0-2]=S3;
+
+	S14=1024+S3*8;
+	S15=(([S14+2*((SP-1)/512)]*512)+((SP-1)%512));
+
+	[S15-1]=-2;	
+
+	breakpoint;
+
+	ireturn;
+
+
+endif;
+
+

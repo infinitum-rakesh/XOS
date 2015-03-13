@@ -1,0 +1,13 @@
+alias n S0;
+alias result S1;
+print "Enter n ";
+read n;
+result = 1;
+while(n > 0 ) do
+	result = result * n;
+	n = n - 1;
+endwhile; 
+print result;
+ 	
+
+

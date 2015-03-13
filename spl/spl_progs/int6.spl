@@ -1,0 +1,84 @@
+//print "int 6";
+
+//aliases
+alias psp S0;
+alias sysno S1;
+alias file S2;
+alias bblock S3;
+alias cpcb S4;
+alias soft_e S5;
+alias i S7;
+alias j S8;
+alias res S9;
+alias k S10;
+
+psp = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+sysno = [psp - 1];
+file = [psp-3];
+
+if(sysno==9)then
+//	print "in exec";
+	i = FAT;
+	while(([i]!=file)&&(i<DISK_LIST))do
+		i = i + 8;
+	endwhile;
+	if(i==DISK_LIST)then
+		res = -1;
+	else
+		if([i + 1]<2048)then
+			bblock = [i + 2];
+			load(1,bblock);
+			i = PTBR;
+			j = SCRATCHPAD;
+			k = MEM_LIST + 29;
+			while(([i]!=-1)&&(i<PTBR+6)&&([j]!=-1))do
+				load([i],[j]);
+				j = j + 1;
+				i = i + 2;
+			endwhile;					
+			if(i<PTBR+6)then
+				if(([i]!=-1)&&([j]==-1))then
+					while(i<PTBR+6)do
+						[MEM_LIST + [i]] = 0;
+						[i + 1] = "00";
+						i = i + 2;
+					endwhile;
+				else
+					if(([i]==-1)&&([j]!=-1))then
+						while([j]!=-1)do
+							while([k]!=0)do
+								k = k + 1;
+							endwhile;
+							load(k-MEM_LIST,[j]);
+							[k] = 1;
+							[i + 1] = "01";
+							j = j + 1;							
+						endwhile;
+					endif;	
+				endif;
+			endif;
+			cpcb = READY_LIST + ((PTBR-1024)/8)*32;
+			i = cpcb + 15;
+			while(i<cpcb+31)do
+				if([i]!=-1)then
+					soft_e = FILE_TABLE + [i]*2;
+					if([soft_e]!=-1)then
+						if([soft_e + 1]==1)then
+							[soft_e] = -1;
+							[soft_e] = 0;
+						else
+							[soft_e + 1] = [soft_e + 1] - 1;	
+						endif;
+					endif;
+				endif;
+				i = i + 2;
+			endwhile;
+			SP = 3*512;
+			[([PTBR + 2 * (SP / 512)] * 512) + (SP % 512)] = 0;
+		else
+			res = -1;
+		endif;
+	endif;	
+endif;
+breakpoint;
+ireturn;

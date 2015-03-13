@@ -1,0 +1,83 @@
+alias physicalSP S0;
+alias sysCallNo S1;
+alias filedesc S2;
+alias NEW_SEEK S3;
+alias SWOFT S4;
+alias LSEEK S5;
+alias FAT_SEARCH S6;
+alias FILE_SIZE S7;
+alias BLOCK_ENTRY S8;
+alias SEEK_POS S9;
+alias BASIC_BLOCK S10;
+alias PROCESS S11;
+alias TEMP S14;
+
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+sysCallNo = [physicalSP-1];
+PROCESS = READY_LIST + ((PTBR - 1024)/8)*32 + 15;
+if sysCallNo == 6 then
+	
+	NEW_SEEK = [physicalSP - 3];
+	filedesc = [physicalSP - 4];
+	if filedesc < 0 || filedesc > 7 then
+		[physicalSP - 2] = 2;
+		ireturn;
+	endif;
+	if [PROCESS + filedesc] == -1 then
+		[physicalSP - 2] = 3;
+		ireturn;
+	else
+		
+		SWOFT = [PROCESS + 2*filedesc];
+		LSEEK = [PROCESS + 2*filedesc + 1];
+		FAT_SEARCH = [SWOFT];
+		FILE_SIZE = [FAT_SEARCH + 1];
+		if NEW_SEEK < 0 || NEW_SEEK > FILE_SIZE then
+			[physicalSP - 2] = 4;
+			ireturn;
+		endif;
+ 		[PROCESS + 2*filedesc + 1] = NEW_SEEK;
+ 		[physicalSP - 2] = 0;
+		ireturn;
+	endif;
+endif;
+if sysCallNo == 7 then
+	
+	filedesc = [physicalSP - 4];
+	if filedesc < 0 || filedesc > 7 then
+		[physicalSP - 2] = 2;
+		ireturn;
+	endif;
+	if [PROCESS + 2*filedesc] == -1 then
+		[physicalSP - 2] = 3;
+		ireturn;
+	else
+		SWOFT = [PROCESS + 2*filedesc];
+		LSEEK = [PROCESS + 2*filedesc + 1];
+		FAT_SEARCH = [SWOFT];
+		FILE_SIZE = [FAT_SEARCH + 1];
+		
+		BASIC_BLOCK = [FAT_SEARCH + 2]; 
+		if  LSEEK >= FILE_SIZE then
+			[physicalSP - 2] = 4;
+			ireturn;
+		endif;	
+		
+		BLOCK_ENTRY = LSEEK / 512;
+		SEEK_POS = LSEEK%512;
+
+		load(1,BASIC_BLOCK);
+		
+		TEMP = [512 + BLOCK_ENTRY];
+		load(1,[512 + BLOCK_ENTRY]);
+		[physicalSP - 3] = [512 + SEEK_POS];
+		store(1,TEMP);
+		 [PROCESS + 2*filedesc + 1] =  [PROCESS + 2*filedesc + 1] + 1;
+		 store(5,19);
+		 store(6,20);
+		 ireturn;
+		[physicalSP - 2] = 0;
+		ireturn;
+	endif;
+endif;		

@@ -1,0 +1,181 @@
+
+
+// loads Exception Handler Routine
+
+load ( 7, 1 ) ;
+load ( 8, 2 ) ;
+
+//loads Timer Interrupt Routine
+
+load ( 9, 3 ) ;
+load ( 10, 4 ) ;
+
+// loads Interrupt routine 1
+
+load ( 11, 5 );
+load ( 12, 6 );
+
+
+// loads Interrupt routine 2
+
+load ( 13, 7 );
+load ( 14, 8 );
+
+// loads Interrupt 3 routine
+
+load ( 15, 9);
+load ( 16, 10 );
+
+
+// loads interrupt routine 4
+
+load ( 17, 11);
+load ( 18, 12 );
+
+// loads interrupt routine 5
+
+load ( 19, 13);
+load ( 20, 14 );
+
+
+// loads interrupt routine 6
+
+load ( 21, 15);
+load ( 22, 16 );
+
+
+
+
+// loads Interrupt routine 7
+
+load ( 23, 17 ) ;
+load ( 24, 18 ) ;
+
+
+// loads Init Process 
+
+//load ( 25, 21 ) ;
+//load ( 26, 22 ) ;
+//load ( 27, 23 ) ;
+
+
+
+// loads DISK FREE LIST and FAT
+
+load ( 5, 19 );
+load ( 6, 20 );
+
+
+
+alias counter S0;
+counter = 0;                                       // SWOFT initialised to invalid
+
+while ( counter < 128 ) do
+	[ FILE_TABLE + counter + 0 ] = -1;
+	[ FILE_TABLE + counter + 1 ] = 0 ;
+	counter = counter + 2;
+endwhile;
+
+
+counter = 0;
+
+while ( counter < 25 ) do
+	[ MEM_LIST + counter ] = 1;
+	counter = counter + 1;
+
+endwhile;
+
+counter = 25;
+while ( counter < 64 ) do
+	[ MEM_LIST + counter ] = 0;
+	counter = counter + 1;
+endwhile;
+
+
+counter = 0;
+
+while ( counter < 32 ) do
+	[ READY_LIST + 32 * counter + 1 ] = 0;
+	counter = counter + 1;
+endwhile;
+
+
+
+
+SP = 3 * 512;
+BP = 3 * 512;
+
+[ READY_LIST + 0 ] = 0;
+[ READY_LIST + 1 ] = 2;
+
+
+[ READY_LIST + 31 ] = 0;
+
+// per process open file table initialised to invalid
+
+counter = 0;                                      // assuming a single process
+
+while ( counter < 8 ) do
+	[ READY_LIST + 15 + 2 * counter + 0 ] = -1;
+	[ READY_LIST + 15 + 2 * counter + 1 ] = 0;
+	
+	counter = counter + 1;
+endwhile;
+
+
+
+
+PTBR = 1024;
+PTLR = 4;
+
+[ PTBR + 0 ] = 21;
+[ PTBR + 1 ] = "00";
+[ PTBR + 2 ] = 22;
+[ PTBR + 3 ] = "00";
+[ PTBR + 4 ] = 23;
+[ PTBR + 5 ] = "00";
+[ PTBR + 6 ] = 25;
+[ PTBR + 7 ] = "01";
+
+
+[MEM_LIST + 25 ] = 1;      //.....................
+
+
+
+[ 25 * 512 ] = 0;
+
+
+
+//mark entries in SWAP AREA as unused
+
+counter = 448;
+
+while ( counter < 512 ) do
+	[ DISK_LIST + counter ] = 0;
+	counter = counter + 1;
+endwhile;
+
+store ( 6, 20);
+
+
+
+
+
+ireturn;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

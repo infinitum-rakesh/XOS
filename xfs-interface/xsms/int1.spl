@@ -1,0 +1,195 @@
+breakpoint;
+
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+
+breakpoint;
+
+alias sysCallNo S1;
+sysCallNo=[physicalSP-1];
+
+breakpoint;
+
+alias file S2;
+file=[physicalSP-3];
+
+
+alias return_value S15;
+return_value=[physicalSP-2];
+ 
+breakpoint;
+
+if(sysCallNo==1) then
+	alias freeDisk S3;
+	freeDisk=6*512+24;
+	
+	breakpoint;
+
+	while(([freeDisk]==1)&&(freeDisk<=((6*512)+447))) do	//modified: "<="
+		freeDisk=freeDisk+1;
+	endwhile;
+
+	breakpoint;
+
+	if([freeDisk]==1) then
+		[physicalSP-2]=-1;
+		ireturn;
+	endif;
+	
+	alias f S4;
+	f=FAT;
+	breakpoint;
+
+//f<FAT+512,for further usage;
+
+	while(f<(FAT+512)) do
+		if([f]==file) then
+			[physicalSP-2]=0;
+		        ireturn;
+		endif;
+		f=f+8;
+
+	endwhile;
+	
+	breakpoint;
+
+	f=FAT;
+
+	while((f<=(FAT+512))&&([f+2]!=-1)) do
+		if(f==(FAT+512)) then
+			[physicalSP-2]=-1;
+		        ireturn;
+		endif;
+	f=f+8;
+	endwhile;
+
+	breakpoint;
+
+	[f]=file;
+	[f+1]=0;
+	[f+2]=(freeDisk)%512;
+	
+	breakpoint;
+
+	[physicalSP-2]=0;
+
+	load(1,(freeDisk)%512);
+	
+	alias temp S5;
+	temp=SCRATCHPAD;
+
+	breakpoint;
+
+	while(temp<(SCRATCHPAD+256)) do
+		[temp]=-1;
+		temp=temp+1;
+	endwhile;
+
+	breakpoint;
+
+	store(1,(freeDisk)%512);
+	
+	//temp=(freeDisk)%512;
+
+	
+	[freeDisk]=1;
+	
+	breakpoint;
+
+
+	store(5,19);
+	store(6,20);	
+	ireturn;
+endif;
+
+if(sysCallNo==4) then
+	//S3 for fat entry;
+	S3=FAT;
+breakpoint;
+	
+	while(S3<3072) do
+		if(S2==[S3]) then
+			break;
+		endif;
+	S3=S3+8;
+	endwhile;
+breakpoint;
+	if(S3>=3072) then
+		[S0-2]=-1;
+		ireturn;
+	endif;
+
+//S4 for fat entry index
+
+	S4=(S3%FAT)/8;
+breakpoint;
+//S5 for basic block
+
+	S5=[S3+2];
+breakpoint;
+	S7=FILE_TABLE;
+breakpoint;
+	while(S7<1472) do
+		if([S7]==S4) then
+			[S0-2]=-1;
+			ireturn;
+		endif;
+	S7=S7+2;
+	endwhile;
+breakpoint;
+	alias counter1 S8;
+	alias counter2 S9;
+
+counter1=0;
+breakpoint;
+
+while(counter1<=255) do
+	load(1,S5);
+	S10=[SCRATCHPAD+counter1];
+//breakpoint;
+if((S10>23) && (S10<448)) then
+	
+	load(1,S10);
+	//breakpoint;
+	counter2=0;
+	while(counter2<=511) do
+		[SCRATCHPAD+counter2]="";
+	counter2=counter2+1;
+	endwhile;
+	[DISK_LIST+S10]=0;
+	store(1,S10);
+	load(1,S5);
+endif;
+counter1=counter1+1;
+endwhile;
+breakpoint;
+
+load(1,S5);
+breakpoint;
+counter2=0;
+breakpoint;
+while(counter2<=511) do
+		[SCRATCHPAD+counter2]="";
+counter2=counter2+1;
+endwhile;
+store(1,S5);
+
+breakpoint;
+[S3]=-1;
+[S3+2]=-1;
+
+[DISK_LIST+S5]=0;
+breakpoint;
+store(5,19);
+store(6,20);	
+
+[S0-2]=0;
+
+ireturn;
+
+endif;
+
+
+
+

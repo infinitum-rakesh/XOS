@@ -1,0 +1,103 @@
+alias physicalSP S0;
+alias sysCallNo S1;
+alias word S2;
+alias filedesc S3;
+alias SWOFT S4;
+alias LSEEK S5;
+alias FAT_SEARCH S6;
+alias BASIC_BLOCK S7;
+alias BLOCK_ENTRY S8;
+alias counter S9;
+alias SEEK_POS S10;
+alias PROCESS S11;
+alias TEMP S12;
+alias FREE S13;
+alias SIZE S14;
+alias TEMP2 S15;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+sysCallNo = [physicalSP-1];
+PROCESS = READY_LIST + ((PTBR - 1024)/8)*32 + 15;
+if sysCallNo == 5 then
+	
+	word = [physicalSP - 3];
+	filedesc = [physicalSP - 4];
+	if filedesc < 0 || filedesc > 7 then
+		[physicalSP - 2] = 2;
+		ireturn;
+	endif;
+	if [READY_LIST + 15 + 2*filedesc] == -1 then
+		[physicalSP - 2] = 3;
+		ireturn;
+	else
+		
+		SWOFT = [PROCESS +  2*filedesc];
+		LSEEK = [PROCESS + 2*filedesc + 1];
+		FAT_SEARCH = [SWOFT];
+		
+		BASIC_BLOCK = [FAT_SEARCH + 2];
+		
+		BLOCK_ENTRY = LSEEK/512;
+		load(1,BASIC_BLOCK);
+		
+		FREE = [512 + BLOCK_ENTRY];
+		breakpoint;
+		if [512 + BLOCK_ENTRY] == -1 then
+			
+			counter = 24;
+			while counter <= 447 do
+				if [6*512 + counter] == 0 then
+					break;
+				else
+					counter = counter + 1;
+				endif;
+			endwhile;
+			if counter == 448 then
+				[physicalSP - 2] = 4;
+				ireturn;
+			endif;
+			[6*512 + counter] = 1;
+			[512 + BLOCK_ENTRY] = counter;
+			store(1,BASIC_BLOCK);	
+			load(1,counter);
+			SEEK_POS = LSEEK%512;
+			[512 + SEEK_POS] = word;
+			alias SIZE S14;
+			TEMP = 0;
+			SIZE = 0;
+			while [512 + TEMP] != "" do
+				SIZE = SIZE + 1;
+				TEMP = TEMP + 1;
+			endwhile;
+			[FAT_SEARCH + 1] = SIZE;	
+			store(1,counter);
+			[PROCESS+ 2*filedesc + 1] = [PROCESS + 2*filedesc + 1] + 1;
+			[physicalSP - 2] = 0;
+			store(5,19);
+			store(6,20);
+			ireturn;	
+		else
+			TEMP2 = 0;
+			TEMP = [512 + BLOCK_ENTRY];
+			store(1,BASIC_BLOCK);
+			load(1,TEMP);
+			SEEK_POS = LSEEK%512;
+			[512 + SEEK_POS] = word;
+			
+			TEMP2 = 0;
+			SIZE = 0;
+			while [512 + TEMP2] != "" do
+				SIZE = SIZE + 1;
+				TEMP2 = TEMP2 + 1;
+			endwhile;
+			store(1,TEMP);
+			[FAT_SEARCH + 1] = SIZE;
+			[PROCESS + 2*filedesc + 1] = [PROCESS + 2*filedesc + 1] + 1;
+			[physicalSP - 2] = 0;
+			store(5,19);
+			store(6,20);
+		ireturn;
+				
+		endif;	
+	endif;
+			
+endif;		

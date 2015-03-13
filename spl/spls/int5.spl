@@ -1,0 +1,99 @@
+alias SysNo S0;
+alias RET_VAL S1;
+alias PhysicalSP S2;
+alias i S3;
+alias novp S4;
+alias j S5;
+alias PPID S6;
+alias CHILD_PID S7;
+alias CHILD_PCB S8;
+alias src S9;
+alias dst S10;
+alias k S11;
+alias PPCB S12;
+alias NOPA S13;
+
+PhysicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+SysNo = [PhysicalSP - 1];
+PPID = (PTBR - PAGE_TABLE)/8;
+PPCB = READY_LIST + PPID*32;
+
+if(SysNo==8)then
+	i = READY_LIST;
+	while((i<FAT)&&([i + 1]!=0))do
+		i = i + 32;
+	endwhile;
+	if(i==FAT)then
+		RET_VAL = -1;
+	else
+		CHILD_PID = (i-READY_LIST)/32;
+		CHILD_PCB = i;
+		[CHILD_PCB]=CHILD_PID;
+		i = MEM_LIST + 25;
+		while((i<FILE_TABLE)&&([i]!=0))do
+			i = i + 1;
+		endwhile;
+		if(i==FILE_TABLE)then
+			RET_VAL = -1;
+		else
+			[i] = 1;
+			j = 0;
+			src = [PTBR + 6]*512;
+			dst = (i-MEM_LIST)*512;
+			while(j<512)do
+				[dst + j] = [src + j];
+				j = j + 1;
+			endwhile;
+			[PAGE_TABLE + CHILD_PID*8 + 6] = i-MEM_LIST;
+			[PAGE_TABLE + CHILD_PID*8 + 7] = "01";
+			i=PTBR;
+			j=PAGE_TABLE + CHILD_PID*8;
+			while(i<PTBR+6)do
+				[j] = [i];
+				[j + 1] = [i + 1];
+				if(([i + 1]=="01")||([i + 1]=="11"))then
+					[ MEM_LIST + [i] ] = [ MEM_LIST + [i] ] + 1;
+				else
+					if([i]>447)then
+						[DISK_LIST + [i]] = [DISK_LIST + [i]] + 1;
+					endif;	
+				endif;
+				i = i + 2;
+				j = j + 2;
+			endwhile;
+			[CHILD_PCB + 5] = PAGE_TABLE + CHILD_PID*8;			//ptbr
+			[CHILD_PCB + 6] = 4;			
+			[CHILD_PCB + 4] = [PhysicalSP];							//ip
+			[CHILD_PCB + 3] = SP - 1;						//sp
+			[CHILD_PCB + 2] = BP;
+			[CHILD_PCB + 7] = R0;
+			[CHILD_PCB + 8] = R1;
+			[CHILD_PCB + 9] = R2;
+			[CHILD_PCB + 10] = R3;
+			[CHILD_PCB + 11] = R4;
+			[CHILD_PCB + 12] = R5;
+			[CHILD_PCB + 13] = R6;
+			[CHILD_PCB + 14] = R7;
+			[CHILD_PCB + 31] = PPID;
+			i = 0;
+			while(i<8)do
+				if([PPCB + 15 + i]!=-1)then
+					[CHILD_PCB + 15 + i] = [PPCB + 15 + i];
+					[CHILD_PCB + 15 + i + 1] = [PPCB + 15 + i + 1];
+					[FILE_TABLE + [PPCB + 15 + i]*2 + 1] = [FILE_TABLE + [PPCB + 15 + i]*2 + 1] + 1;
+					if(6*512+[CHILD_PCB + 15 + i] >= 448 && 6*512 + [CHILD_PCB + 15 + i] <= 511) then
+
+						[6*512 + [CHILD_PCB + 15 + i] ] = [6*512 + [CHILD_PCB + 15 + i] ]  + 1;   
+					endif;
+				endif;
+				i = i + 2;
+			endwhile;
+			[CHILD_PCB + 1] = 1;
+			RET_VAL = CHILD_PID;
+			[([[CHILD_PCB + 5] + 2 * ((SP-2) / 512)] * 512) + ((SP-2) % 512)] = -2;
+		endif;
+	endif;
+endif;
+store(6,20);
+[PhysicalSP - 2] = RET_VAL;
+ireturn;

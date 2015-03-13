@@ -1,0 +1,90 @@
+alias physicalSP S0;
+alias SysNo S1;
+alias arg1 S2;
+alias RET_VAL S3;
+alias ft S4;
+alias FAT_INDEX S5;
+alias i S6;
+alias POFT S7;
+alias SWOFT S8;
+alias SWOFT_INDEX S9;
+alias POFT_IND S10;
+
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+SysNo = ([PTBR + 2 * ((SP-1) / 512)] * 512) + ((SP-1) % 512);
+SysNo = [SysNo];
+POFT = READY_LIST + ((PTBR - 1024)/8)*32 + 15;
+arg1 = [([PTBR + 2 * ((SP-3) / 512)] * 512) + ((SP-3) % 512)];		
+
+if(SysNo == 2) then
+	ft = FAT;
+	while((ft - FAT < 512)&&([ft]!=arg1)) do
+		ft = ft + 8;
+	endwhile;
+	if(ft - FAT == 512) then
+		RET_VAL = -1;
+	else
+		FAT_INDEX = (ft - FAT)/8;
+		i = 0;
+		SWOFT = -1;
+		while((i<128)&&([FILE_TABLE+i]!=FAT_INDEX))do
+			i = i + 2;
+			if([FILE_TABLE + i]==-1)then
+				SWOFT = FILE_TABLE + i; 
+			endif;
+		endwhile;
+		if(i==128)then
+			if(SWOFT != -1)then
+				[SWOFT] = FAT_INDEX;
+				SWOFT_INDEX = (SWOFT - FILE_TABLE)/2;
+			else
+				RET_VAL=-1;
+			endif;	
+		else
+			SWOFT_INDEX = i/2;
+			SWOFT = FILE_TABLE + i;
+		endif;
+		i = 0;
+		while((i<16)&&([POFT + i]!=-1))do
+			i = i + 2;
+		endwhile;
+		if(i==16)then
+			RET_VAL = -1;
+		else
+			POFT_IND = i/2;
+			RET_VAL = POFT_IND;
+			[POFT + i] = SWOFT_INDEX;
+			[POFT + i + 1] = 0;
+			[SWOFT + 1] = [SWOFT + 1] + 1;
+		endif;	
+	endif;
+endif;
+if(SysNo==3)then
+//	print "in close";
+	if((arg1>=0)&&(arg1<8))then
+		POFT = POFT + arg1*2;
+		if([POFT]!=-1)then
+			SWOFT_INDEX = [POFT];
+			SWOFT = FILE_TABLE + SWOFT_INDEX*2;
+			if([SWOFT + 1]==1)then
+				[SWOFT] = -1;
+				[SWOFT + 1] = 0;
+			else
+				[SWOFT + 1] = [SWOFT + 1] - 1;	
+			endif;
+			[POFT] = -1;
+			[POFT + 1] = -1;
+			RET_VAL = 0;
+		else
+			RET_VAL = -1;
+		endif;
+	else
+		RET_VAL = -1;	
+	endif;
+endif;
+[([PTBR + 2 * ((SP-2) / 512)] * 512) + ((SP-2) % 512)] = RET_VAL;
+if(RET_VAL==-1)then
+	breakpoint;
+endif;	
+
+ireturn;

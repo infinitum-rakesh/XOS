@@ -1,0 +1,106 @@
+
+alias physicalSP S0;
+alias sysno S1;
+alias FILE_NAME S2;
+alias dl S3;
+alias RETVAL S4;
+alias eft S6;
+alias FAT_INDEX S7;
+alias i S8;
+alias BASIC S9;
+alias BLOCK_NUM S10;
+alias j S11;
+
+FILE_NAME = [([PTBR + 2 * ((SP-3) / 512)] * 512) + ((SP-3) % 512)];
+sysno = [([PTBR + 2 * ((SP-1) / 512)] * 512) + ((SP-1) % 512)];
+dl = DISK_LIST + 24;
+FAT_INDEX = FAT;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+if ( sysno == 1) then
+//	print "in create";
+	while((FAT_INDEX <DISK_LIST)&&([FAT_INDEX]!=FILE_NAME)) do
+		FAT_INDEX = FAT_INDEX + 8;
+	endwhile;
+	if(FAT_INDEX==DISK_LIST) then
+		while((dl<EX_HANDLER)&&([dl]==1)) do
+			dl = dl+1;
+		endwhile;
+		if(dl==EX_HANDLER) then
+			RETVAL = -1;
+		else
+			FAT_INDEX = FAT;
+			while([FAT_INDEX + 2]!=-1)do
+				FAT_INDEX = FAT_INDEX + 8;
+			endwhile;
+			if(FAT_INDEX==DISK_LIST)then
+				RETVAL = -1;
+			else
+				RETVAL = 0;
+				[FAT_INDEX] = FILE_NAME;
+				[FAT_INDEX + 1] = 0;
+				[FAT_INDEX + 2] = dl-DISK_LIST;
+				[dl] = 1;
+				load(1,dl-DISK_LIST);
+				i = 0;
+				while(i<512) do
+					[SCRATCHPAD+i] = -1;
+					i = i+1;
+				endwhile;			
+				store(1, dl-DISK_LIST);		
+			endif;		
+		endif;
+	else
+		RETVAL = 0;
+	endif;
+endif;
+
+if ( sysno == 4) then
+//	print "in delete";
+	while((FAT_INDEX - FAT<512)&&([FAT_INDEX]!=FILE_NAME)) do
+		FAT_INDEX = FAT_INDEX + 8;
+	endwhile;
+	if(FAT_INDEX-FAT==512)then
+		RETVAL = -1;
+	else
+		FAT_INDEX = (FAT_INDEX-FAT)/8;
+		eft = FILE_TABLE;
+		while((eft-FILE_TABLE<128)&&([eft]!=FAT_INDEX))do
+			print eft-FILE_TABLE;
+			eft = eft + 2;
+		endwhile;
+		if(eft-FILE_TABLE!=128)then
+			RETVAL = -1;
+		else
+			BASIC = [FAT_INDEX + 2];
+			i = 0;
+			while(i<=512)do
+				load(1,BASIC);
+				if(i==512)then
+					BLOCK_NUM = BASIC;
+				else
+					BLOCK_NUM = [SCRATCHPAD + i];
+				endif;	
+				if(BLOCK_NUM!=-1)then
+					load(1,BLOCK_NUM);
+					j = 0;
+					while(j<512)do
+						[SCRATCHPAD + j] = "";
+						j = j + 1;
+					endwhile;
+					[DISK_LIST + BLOCK_NUM] = 0;
+					store(1,BLOCK_NUM);
+				endif;
+				i = i + 1;
+			endwhile;
+			[FAT_INDEX + 0] = -1;
+			[FAT_INDEX + 1] = 0;
+			[FAT_INDEX + 2] = -1;	
+		endif;	
+	endif;
+endif;
+[([PTBR + 2 * ((SP-2) / 512)] * 512) + ((SP-2) % 512)] = RETVAL;
+store(5,19);
+store(6,20);
+//breakpoint;
+ireturn;

@@ -1,0 +1,114 @@
+//print "in startup";
+//aliases
+alias i S0;
+
+//loading exception handler
+load(7,1);
+load(8,2);
+
+//load timer int
+load (9, 3);
+load (10, 4);
+
+//loading fat n df
+load(5,19);
+load(6,20);
+
+//loading int1 interrupt
+load (11, 5);
+load (12, 6);
+
+//loading int2 interrupt
+load (13, 7);
+load (14, 8);
+
+//loading int3 interrupt
+load (15, 9);
+load (16, 10);
+
+//loading int4 interrupt
+load (17, 11);
+load (18, 12);
+
+//loading int5 interrupt
+load (19, 13);
+load (20, 14);
+
+//loading int6 interrupt
+load (21, 15);
+load (22, 16);
+
+//loading int7 interrupt
+load(23,17);
+load(24,18);
+
+//loading init code
+//load(25,21);
+//load(26,22);
+//load(27,23);
+
+//system wide open file table setup
+i = 0;
+while(i<128) do
+	[FILE_TABLE + i + 0] = -1;
+	[FILE_TABLE + i + 1] = 0;
+	i = i + 2;
+endwhile;
+
+//setting memory free list
+i = MEM_LIST;
+while(i-MEM_LIST<25)do
+	[i] = 1;
+	i = i + 1;
+endwhile;
+i = MEM_LIST + 25;
+while(i<FILE_TABLE)do
+	[i] = 0;
+	i = i + 1;
+endwhile;
+[MEM_LIST + 28] = 1;
+
+//setting all pcb state entries to 0
+i = READY_LIST;
+while(i<FAT)do
+	[i + 1] = 0;
+	i = i + 32;
+endwhile;
+
+//loading exc handler
+load(7,1);
+load(8,2);
+
+//setting up init pcb
+[READY_LIST + 0] = 0;
+[READY_LIST + 1] = 2;
+[READY_LIST + 31] = 0;
+PTBR = 1024;
+PTLR = 4;
+[PTBR + 0] = 21;
+[PTBR + 1] = "00";
+[PTBR + 2] = 22;
+[PTBR + 3] = "00";
+[PTBR + 4] = 23;
+[PTBR + 5] = "00";
+[PTBR + 6] = 28;
+[PTBR + 7] = "01";
+SP = 3 * 512;
+[28 * 512] = 0;
+[MEM_LIST + 28] = 1;
+//setting per-process open file table of init
+i = READY_LIST + 15;
+while(i<READY_LIST + 31) do
+	[i] = -1;
+	i = i + 1;
+endwhile;
+
+//setting swap blocks;
+i = DISK_LIST + 448;
+while(i<EX_HANDLER)do
+	[i]=0;
+	i = i + 1;
+endwhile;
+store(6,20);
+
+ireturn;

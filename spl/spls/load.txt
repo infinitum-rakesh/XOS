@@ -1,0 +1,13 @@
+load --os $osl/os_startup.xsm
+load --init $osl/init.xsm
+load --int=1 $osl/int1.xsm
+load --int=2 $osl/int2.xsm
+load --int=3 $osl/int3.xsm
+load --int=4 $osl/int4.xsm
+load --int=5 $osl/int5.xsm
+load --int=6 $osl/int6.xsm
+load --int=7 $osl/int7.xsm
+load --exhandler $osl/exhandler.xsm
+load --int=timer $osl/timer.xsm
+load --exec $osl/x1.xsm
+load --exec $osl/x2.xsm
